@@ -12,14 +12,33 @@ License:
   tsqltools is free to download.It contains Tsql stored procedures 
   and scripts to help the DBAs and Developers to make job easier
 (C) 2017
+
 *******************************************************************/  
+/*
+Checks:
+-------
+1. SQL services account - All sql services must run under an AD account or Administrator account
+2. Default directories  - Data,Log and backup directories must not be in C:\ drive
+3. Startup Type         - SQL serices should be start automatically
+4. SA Account name      - Its a best practice to rename SA account 
+5. Disable SA account   - Create an alternate SQL user with SYSADMIN priileges and disable SA account
+6. Password Check       - Change SQL users password at every 3 months, 
+                          Don't make Username and password is same, 
+                          Don't user blank passwords
+7. SysAdmin User        - List of users who have sysadmin role.
+8. SQL Port Type        - SQL is using Static Port or Dynamic Port
+9. SQL Port             - Use any port rathar than 1433.
+10. Number of databases - Use 100 or < 100 databases for a server.
+11. Buildin Administrator - Disables Buildin\Administrator group from sql login.                          
+*/
+
 
 IF OBJECT_ID('tempdb.dbo.#Result', 'U') IS NOT NULL
   DROP TABLE #result
 
 CREATE TABLE #result (
-  checks nvarchar(500),
-  recommendation nvarchar(500)
+  CHECKS nvarchar(500),
+  RECOMENTATION nvarchar(500)
 )
 
 IF OBJECT_ID('tempdb.dbo.#ServiceAccount', 'U') IS NOT NULL
