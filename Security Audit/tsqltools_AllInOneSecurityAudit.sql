@@ -40,7 +40,7 @@ IF OBJECT_ID('tempdb.dbo.#Result', 'U') IS NOT NULL
 
 CREATE TABLE #result (
   CHECKS nvarchar(500),
-  RECOMENTATION nvarchar(500)
+  RECOMMENTATION nvarchar(500)
 )
 
 IF OBJECT_ID('tempdb.dbo.#ServiceAccount', 'U') IS NOT NULL
