@@ -27,7 +27,7 @@ Checks:
                           Don't user blank passwords
 7. SysAdmin User        - List of users who have sysadmin role.
 8. SQL Port Type        - SQL is using Static Port or Dynamic Port
-9. SQL Port             - Use any port rathar than 1433.
+9. SQL Port             - Use any port other than 1433.
 10. Number of databases - Use 100 or < 100 databases for a server.
 11. Buildin Administrator - Disables Buildin\Administrator group from sql login. 
 12. Database level Access - Limit the db_owner users.                         
