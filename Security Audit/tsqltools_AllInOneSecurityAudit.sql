@@ -1,13 +1,14 @@
 /*****************************************************************
-                 -------------------------
-                 tsqltools - Security Audit
-                 -------------------------
+                 -------------------------------------
+                 tsqltools - All In One Security Audit
+                 -------------------------------------
 
 Version: v1.0 
 Release Date: 2017-06-02
 Author: Bhuvanesh(@SQLadmin)
 Feedback: mailto:r.bhuvanesh@outlook.com
 Updates: http://medium.com/sqladmin
+Repo: https://github.com/sqladmin
 License: 
   tsqltools is free to download.It contains Tsql stored procedures 
   and scripts to help the DBAs and Developers to make job easier
@@ -360,7 +361,9 @@ ELSE
     SELECT
       'Is Buildin AdminGroup enabled',
       'OK'
-
+Insert into #result 
+values 
+('For More Updates','https://medium.com/SqlAdmin')
 SELECT
   *
 FROM #result
