@@ -8,7 +8,6 @@ Release Date: 2017-06-02
 Author: Bhuvanesh(@SQLadmin)
 Feedback: mailto:r.bhuvanesh@outlook.com
 Updates: http://medium.com/sqladmin
-Repo: https://github.com/sqladmin
 License: 
   tsqltools is free to download.It contains Tsql stored procedures 
   and scripts to help the DBAs and Developers to make job easier
@@ -30,7 +29,8 @@ Checks:
 8. SQL Port Type        - SQL is using Static Port or Dynamic Port
 9. SQL Port             - Use any port rathar than 1433.
 10. Number of databases - Use 100 or < 100 databases for a server.
-11. Buildin Administrator - Disables Buildin\Administrator group from sql login.                          
+11. Buildin Administrator - Disables Buildin\Administrator group from sql login. 
+12. Database level Access - Limit the db_owner users.                         
 */
 
 
@@ -361,9 +361,61 @@ ELSE
     SELECT
       'Is Buildin AdminGroup enabled',
       'OK'
-Insert into #result 
-values 
-('For More Updates','https://medium.com/SqlAdmin')
+ Insert into #result 
+ values 
+ ('For More Updates','https://medium.com/SqlAdmin')
 SELECT
   *
 FROM #result
+
+-------------------------------
+-- Database Level Privileges --
+-------------------------------
+DECLARE @DB_USers TABLE (
+  DBName sysname,
+  UserName sysname,
+  LoginType sysname,
+  AssociatedRole varchar(max),
+  create_date datetime,
+  modify_date datetime
+)
+
+INSERT @DB_USers
+EXEC sp_MSforeachdb '
+use [?]
+SELECT ''?'' AS DB_Name,
+case prin.name when ''dbo'' then prin.name + '' (''+ (select SUSER_SNAME(owner_sid) from master.sys.databases where name =''?'') + '')'' else prin.name end AS UserName,
+prin.type_desc AS LoginType,
+isnull(USER_NAME(mem.role_principal_id),'''') AS AssociatedRole ,create_date,modify_date
+FROM sys.database_principals prin
+LEFT OUTER JOIN sys.database_role_members mem ON prin.principal_id=mem.member_principal_id
+WHERE prin.sid IS NOT NULL and prin.sid NOT IN (0x00) and
+prin.is_fixed_role <> 1 AND prin.name NOT LIKE ''##%'''
+
+SELECT
+
+  DBname,
+  UserName,
+  LoginType,
+  create_date as CreateDate,
+  modify_date as ModifiedDate,
+
+  STUFF((SELECT
+    ',' + CONVERT(varchar(500), associatedrole)
+
+  FROM @DB_USers user2
+
+  WHERE user1.DBName = user2.DBName
+  AND user1.UserName = user2.UserName
+
+  FOR xml PATH ('')), 1, 1, '') AS PermissionUser
+
+FROM @DB_USers user1
+
+GROUP BY dbname,
+         username,
+         logintype,
+         create_date,
+         modify_date
+
+ORDER BY DBName, username
