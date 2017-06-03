@@ -8,6 +8,7 @@ Release Date: 2017-06-02
 Author: Bhuvanesh(@SQLadmin)
 Feedback: mailto:r.bhuvanesh@outlook.com
 Updates: http://medium.com/sqladmin
+Repo: https://github.com/SqlAdmin/tsqltools/
 License: 
   tsqltools is free to download.It contains Tsql stored procedures 
   and scripts to help the DBAs and Developers to make job easier
