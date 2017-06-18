@@ -62,7 +62,7 @@ INSERT INTO #result
   SELECT
     Concat('Service Account - ', servicename),
     CASE
-      WHEN serviceaccount LIKE 'NT %' THEN 'Try to change an AD account or Administrator Account'
+        WHEN serviceaccount like 'NT%' or serviceaccount like 'Local%' THEN 'Try to change an AD account or Administrator Account'
       ELSE 'OK'
     END AS Recommendation
   FROM #serviceaccount
