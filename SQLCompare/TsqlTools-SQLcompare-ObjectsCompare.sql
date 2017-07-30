@@ -112,5 +112,4 @@ SELECT *
 FROM   #objectstaus where objecttype not in ('USER_TABLE')
 ORDER  BY dbname ASC 
 DROP TABLE #objectstaus 
-
-DROP TABLE #objectstaus 
+ 
