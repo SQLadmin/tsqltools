@@ -109,7 +109,55 @@ FROM   #objectstaus where objecttype='USER_TABLE'
 ORDER  BY dbname ASC 
 
 SELECT * 
-FROM   #objectstaus where objecttype not in ('USER_TABLE')
+FROM   #objectstaus where objecttype='CHECK_CONSTRAINT'
+ORDER  BY dbname ASC 
+
+SELECT * 
+FROM   #objectstaus where objecttype='DEFAULT_CONSTRAINT'
+ORDER  BY dbname ASC 
+
+SELECT * 
+FROM   #objectstaus where objecttype='FOREIGN_KEY_CONSTRAINT'
+ORDER  BY dbname ASC 
+
+SELECT * 
+FROM   #objectstaus where objecttype='PRIMARY_KEY_CONSTRAINT'
+ORDER  BY dbname ASC 
+
+SELECT * 
+FROM   #objectstaus where objecttype='UNIQUE_CONSTRAINT'
+ORDER  BY dbname ASC 
+
+SELECT * 
+FROM   #objectstaus where objecttype='SQL_TRIGGER'
+ORDER  BY dbname ASC 
+
+SELECT * 
+FROM   #objectstaus where objecttype='VIEW'
+ORDER  BY dbname ASC 
+
+SELECT * 
+FROM   #objectstaus where objecttype='SQL_STORED_PROCEDURE'
+ORDER  BY dbname ASC 
+
+SELECT * 
+FROM   #objectstaus where objecttype not in ('USER_TABLE',
+'CHECK_CONSTRAINT',
+'DEFAULT_CONSTRAINT',
+'FOREIGN_KEY_CONSTRAINT',
+'PRIMARY_KEY_CONSTRAINT',
+'SQL_TRIGGER',
+'VIEW',
+'SQL_STORED_PROCEDURE'
+'UNIQUE_CONSTRAINT')
 ORDER  BY dbname ASC 
 DROP TABLE #objectstaus 
  
+
+ 
+
+
+
+ 
+
+  
