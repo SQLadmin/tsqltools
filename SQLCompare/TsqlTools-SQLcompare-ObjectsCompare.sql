@@ -14,12 +14,18 @@ License:
 (C) 2017
  
  
-/*======================================================================
+======================================================================
 
 What is TsqlTools-SQLcompare? 
 
 TsqlTools-SQLcompare is a tsqlscript that will help to compare Databases, 
 Tables, Objects, Indexices between two servers without any tools.
+
+======================================================================
+How to Start?
+
+Use a centalized server  and create LinkedServers from the centralized server.
+Or Create LinkedServer on SourceDB server then run this query on SourceDB server.
 
 ========================================================================*/
 DECLARE @SOURCEDBSERVER VARCHAR(100) 
