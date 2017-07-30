@@ -30,9 +30,9 @@ DECLARE @SOURCE_DATABASENAME TABLE
      dbname VARCHAR(100) 
   ) 
 
-SELECT @SOURCEDBSERVER = '[prod6-db01]' 
+SELECT @SOURCEDBSERVER = '[db01]' 
 
-SELECT @DESTINATIONDBSERVER = '[prod2-db01]' 
+SELECT @DESTINATIONDBSERVER = '[db02]' 
 
 SELECT @SOURCE_SQL_DBNAME = 'select name from ' + @SOURCEDBSERVER 
                             + '.master.sys.databases where database_id>4' 
