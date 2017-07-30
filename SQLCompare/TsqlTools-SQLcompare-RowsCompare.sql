@@ -29,9 +29,9 @@ DECLARE @SOURCE_DATABASENAME TABLE (  dbname varchar(100))
 DECLARE @DESTINATION_SQL_DBNAME nvarchar(300)
 DECLARE @DESTINATION_DATABASENAME TABLE (  dbname varchar(100))
 
-SELECT @SOURCEDBSERVER = '[db01]' 
+SELECT @SOURCEDBSERVER = '[db01]' --==> Replace Your Source DB serverName Here
 
-SELECT @DESTINATIONDBSERVER = '[db02]' 
+SELECT @DESTINATIONDBSERVER = '[db02]' --==> Replace Your Target DB serverName Here
 
 Create table #sourceTbl (DBname nvarchar(200),TableName nvarchar(200),Rows bigint)
 Create table #DestTbl (DBname nvarchar(200),TableName nvarchar(200),Rows bigint)

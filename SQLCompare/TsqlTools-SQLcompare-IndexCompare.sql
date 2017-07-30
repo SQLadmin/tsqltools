@@ -30,9 +30,9 @@ DECLARE @DESTINATION_SQL_DBNAME nvarchar(300)
 DECLARE @DESTINATION_DATABASENAME TABLE (  dbname varchar(100))
 
 
-SELECT @SOURCEDBSERVER = '[db01]' 
+SELECT @SOURCEDBSERVER = '[db01]' --==> Replace Your Source DB serverName Here
 
-SELECT @DESTINATIONDBSERVER = '[db02]' 
+SELECT @DESTINATIONDBSERVER = '[db02]' --==> Replace Your Target DB serverName Here
 
 SELECT
   @SOURCE_SQL_DBNAME = 'select name from ' + @SOURCEDBSERVER + '.master.sys.databases where database_id>4'
