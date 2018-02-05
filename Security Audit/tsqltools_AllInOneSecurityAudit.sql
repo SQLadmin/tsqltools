@@ -364,7 +364,7 @@ ELSE
       'OK'
  Insert into #result 
  values 
- ('For More Updates','https://medium.com/SqlAdmin')
+ ('For More Updates','https://github.com/SqlAdmin/tsqltools/')
 SELECT
   *
 FROM #result
