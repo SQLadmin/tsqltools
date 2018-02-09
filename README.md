@@ -12,4 +12,4 @@ Tsql stored procedures and scripts to help the DBAs and Developers to make their
 
 * AWS RDS
 	* [Enable CDC on exsiting tables in one shot](https://github.com/SqlAdmin/tsqltools/blob/master/AWS%20RDS/sp_add_cdc.sql)
-	* [Automate enable CDC on when table is created](https://github.com/SqlAdmin/tsqltools/blob/master/AWS%20RDS/sp_auto_cdc.sql)
+	* [Automate - enable CDC on when table is created](https://github.com/SqlAdmin/tsqltools/blob/master/AWS%20RDS/sp_auto_cdc.sql)
