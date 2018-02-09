@@ -1,3 +1,31 @@
+/*****************************************************************
+                 -------------------------------------
+                 tsqltools - RDS Add CDC
+                 -------------------------------------
+Description: This stored procedure will help you to enable CDC on 
+all the exsiting tables. You have to run this store procedure on the 
+database where you need to add the tables. It won't support Cross 
+database's tables.
+
+How to Run: If you want to enable CDC on the tables which 
+all are in DBAdmin database,
+
+EXEC sp_add_cdc 'DBAdmin'
+
+-------------------------------------------------------------------
+
+Version: v1.0 
+Release Date: 2018-02-09
+Author: Bhuvanesh(@SQLadmin)
+Feedback: mailto:r.bhuvanesh@outlook.com
+Updates: https://github.com/SqlAdmin/tsqltools/
+License: GPL-3.0
+  tsqltools is free to download.It contains Tsql stored procedures 
+  and scripts to help the DBAs and Developers to make job easier
+(C) 2017
+*******************************************************************/  
+
+-- READ THE DESCRIPTION BEFORE EXECUTE THIS ***
 IF OBJECT_ID('dbo.sp_add_cdc') IS NULL
   EXEC ('CREATE PROCEDURE dbo.sp_add_cdc AS RETURN 0;');
 GO
@@ -42,7 +70,7 @@ BEGIN
 SELECT table_name
     FROM INFORMATION_SCHEMA.TABLES Join sys.tables t3 on table_name = t3.name
     where TABLE_NAME not in (select table_name
-        from INFORMATION_SCHEMA.TABLE_CONSTRAINTS) and table_schema !='cdc' and TABLE_NAME!='systranschemas' and t3.is_tracked_by_cdc=0;
+        from INFORMATION_SCHEMA.TABLE_CONSTRAINTS) and table_schema !='cdc' and TABLE_NAME !='systranschemas' and t3.is_tracked_by_cdc=0;
 
     OPEN nonprimary_cursor
     FETCH NEXT FROM nonprimary_cursor INTO @name
