@@ -10,6 +10,8 @@ database's tables.
 How to Run: If you want to enable CDC on the tables which 
 all are in DBAdmin database,
 
+USE DBAdmin
+GO
 EXEC sp_add_cdc 'DBAdmin'
 
 -------------------------------------------------------------------
