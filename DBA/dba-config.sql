@@ -67,7 +67,7 @@ DECLARE @CostThresHold INT
 DECLARE @DBfile nvarchar(500)
 DECLARE @Logfile nvarchar(500)
 DECLARE @Backup NVARCHAR(500)
-DECLARE @TempfilePath nvarchar(500)
+DECLARE @TempfilePath nvarchar(500) -- its mandatory
 DECLARE @TempfileSize nvarchar(100) 
 
 
