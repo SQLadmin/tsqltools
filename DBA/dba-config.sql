@@ -223,8 +223,6 @@ exec tempdb.dbo.sp_helpfile
 
 SET @TempfileSize = coalesce(nullif(@TempfileSize, ''), '100MB')
 
-
-
 IF @currenttempfine = @requiredtmpfiles    Print 'TempDB Files Are OK'
 SET @int=1
 Set @MAX_File = (@requiredtmpfiles -@currenttempfine)
