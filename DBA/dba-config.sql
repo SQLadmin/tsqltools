@@ -20,7 +20,7 @@ TempfilePath	=> Path for adding tempDB files [Default - Current Temp mdf file pa
 TempfileSize	=> Size for new temp DB files [Default - 100MB]
 
 
-Other Parameters Reset it to Default:
+Other Parameters will Reset to Default:
 1. index create memory = 0
 2. min memory per query = 1024
 3. priority boost = 0
