@@ -209,17 +209,6 @@ IF @CPU >8  Set @requiredtmpfiles = 9
 -- Declare variables for adding new tempDB files
 Declare @int int
 Declare @MAX_File int
-Declare @temp table   (name nvarchar(20),
-    id int,
-    location nvarchar(1000),
-    f_group varchar(20),
-    size nvarchar(100),
-    maxsize nvarchar(100),
-    growth nvarchar(100),
-    usgae nvarchar(100))
-
-Insert into @temp
-exec tempdb.dbo.sp_helpfile
 
 SET @TempfileSize = coalesce(nullif(@TempfileSize, ''), '100MB')
 
