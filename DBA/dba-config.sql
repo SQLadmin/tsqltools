@@ -18,7 +18,7 @@ Parameters:
 +-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
 | Parallelism | P_MAXDOP      | Set Max Degree of Parallelism | Based on CPU Cores            | Numbers               | DECLARE @P_MAXDOP INT=3                    |
 +-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
-| Parallelism | CostThresHold | Cost value to use Parallelism | 50                            | Numbers               | DECLARE @CostThresHold INT                 |
+| Parallelism | CostThresHold | Cost value to use Parallelism | 50                            | Numbers               | DECLARE @CostThresHold INT  =10            |
 +-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
 | Files       | DBfile        | Default Data files            | Current Data file location    | Path for the files    | DECLARE @DBfile nvarchar(500)='C:\Data'    |
 +-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
@@ -27,6 +27,14 @@ Parameters:
 | Files       | Backup        | Default path for Backup files | Current Backup file path      | Path for Backups      | DECLARE @Backup NVARCHAR(500)='C:\backups' |
 +-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
 
+Other Parameters Reset it to Default:
+1. index create memory = 0
+2. min memory per query = 1024
+3. priority boost = 0
+4. max worker threads = 0
+5. lightweight pooling = 0
+6. fill factor = 0
+7. backup compression default = 1
 
 Here is how I executed?
 
