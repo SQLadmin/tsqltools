@@ -36,15 +36,6 @@ Other Parameters Reset it to Default:
 6. fill factor = 0
 7. backup compression default = 1
 
-Here is how I executed?
-
-DECLARE @MinMem int  -- Let the query calculate this
-DECLARE @MaxMem int  -- Let the query calculate this
-DECLARE @P_MAXDOP INT  -- Let the query calculate this
-DECLARE @CostThresHold INT  -- Let the query calculate this
-DECLARE @DBfile nvarchar(500) -- 'C:\Data'
-DECLARE @Logfile nvarchar(500) -- 'C:\Log'
-DECLARE @Backup NVARCHAR(500)  -- 'C:\Backups'
 
 
 Credits: This Max_DOP value query written by Kin 
@@ -57,11 +48,27 @@ Author: Bhuvanesh(@SQLadmin)
 Feedback: mailto:r.bhuvanesh@outlook.com
 Updates: www.sqlgossip.com
 License:  GPL-3.0
-
-
 (C) 2018
- 
- 
+
+*************************
+Here is how I executed?
+*************************
+╔════════════════════════════════════════════════════════════╗
+║ DECLARE @MinMem int,-- Let the query calculate this        ║
+╠════════════════════════════════════════════════════════════╣
+║ DECLARE @MaxMem int,-- Let the query calculate this        ║
+╠════════════════════════════════════════════════════════════╣
+║ DECLARE @P_MAXDOP INT,-- Let the query calculate this      ║
+╠════════════════════════════════════════════════════════════╣
+║ DECLARE @CostThresHold INT,-- Let the query calculate this ║
+╠════════════════════════════════════════════════════════════╣
+║ DECLARE @DBfile nvarchar(500) -- 'C:\Data'                 ║
+╠════════════════════════════════════════════════════════════╣
+║ DECLARE @Logfile nvarchar(500) -- 'C:\Log'                 ║
+╠════════════════════════════════════════════════════════════╣
+║ DECLARE @Backup NVARCHAR(500)                              ║
+╚════════════════════════════════════════════════════════════╝
+
 ******************************************************************/
 
 -- Global Declarations
