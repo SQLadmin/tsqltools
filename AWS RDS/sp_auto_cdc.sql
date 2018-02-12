@@ -20,6 +20,7 @@ Release Date: 2018-02-10
 Author: Bhuvanesh(@SQLadmin)
 Feedback: mailto:r.bhuvanesh@outlook.com
 Updates: https://github.com/SqlAdmin/tsqltools/
+Blog: http://www.sqlgossip.com/automatically-enable-cdc-in-rds-sql-server/
 License: GPL-3.0
   tsqltools is free to download.It contains Tsql stored procedures 
   and scripts to help the DBAs and Developers to make job easier
