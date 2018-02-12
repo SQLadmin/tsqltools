@@ -39,7 +39,7 @@ Version: v1.0
 Release Date: 2018-02-12
 Author: Bhuvanesh(@SQLadmin)
 Feedback: mailto:r.bhuvanesh@outlook.com
-Updates: www.sqlgossip.com
+Blog: www.sqlgossip.com
 License:  GPL-3.0
 (C) 2018
 
