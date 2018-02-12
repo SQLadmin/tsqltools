@@ -9,23 +9,16 @@ SQL Server you can Run this.
 
 Parameters:
 
-+-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
-| Category    | Paramter      | Purpose                       | Default Value (Best Practice) | Value Type            | Example                                    |
-+-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
-| Memroy      | MinMem        | Assign Minimum Memory         | 0                             | Values in MB          | DECLARE @MinMem int = 1                    |
-+-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
-| Memory      | MaxMem        | Assign Maximum  Memory        | 90                            | Values in Percentage  | DECLARE @MaxMem int=90                     |
-+-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
-| Parallelism | P_MAXDOP      | Set Max Degree of Parallelism | Based on CPU Cores            | Numbers               | DECLARE @P_MAXDOP INT=3                    |
-+-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
-| Parallelism | CostThresHold | Cost value to use Parallelism | 50                            | Numbers               | DECLARE @CostThresHold INT  =10            |
-+-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
-| Files       | DBfile        | Default Data files            | Current Data file location    | Path for the files    | DECLARE @DBfile nvarchar(500)='C:\Data'    |
-+-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
-| Files       | Logfile       | Default Log files             | Current Log file location     | Path for the Log file | DECLARE @Logfile nvarchar(500)='C:\Log'    |
-+-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
-| Files       | Backup        | Default path for Backup files | Current Backup file path      | Path for Backups      | DECLARE @Backup NVARCHAR(500)='C:\backups' |
-+-------------+---------------+-------------------------------+-------------------------------+-----------------------+--------------------------------------------+
+MinMem        	=> Assign Minimum Memory [Default 0]       
+MaxMem        	=> Assign Maximum  Memory [Default 90%]       
+P_MAXDOP      	=> Set Max Degree of Parallelism [ Default - Based on CPU Cores]
+CostThresHold 	=> Cost value to use Parallelism [Default - 50]
+DBfile        	=> Default Data files [Default - Current Data file location]           
+Logfile       	=> Default Log files [Default- Current Log file location]            
+Backup        	=> Default path for Backup files [Default - Current Data backup location ]
+TempfilePath	=> Path for adding tempDB files [Default - Current Temp mdf file path]
+TempfileSize	=> Size for new temp DB files [Default - 100MB]
+
 
 Other Parameters Reset it to Default:
 1. index create memory = 0
@@ -53,21 +46,16 @@ License:  GPL-3.0
 *************************
 Here is how I executed?
 *************************
-╔════════════════════════════════════════════════════════════╗
-║ DECLARE @MinMem int,-- Let the query calculate this        ║
-╠════════════════════════════════════════════════════════════╣
-║ DECLARE @MaxMem int,-- Let the query calculate this        ║
-╠════════════════════════════════════════════════════════════╣
-║ DECLARE @P_MAXDOP INT,-- Let the query calculate this      ║
-╠════════════════════════════════════════════════════════════╣
-║ DECLARE @CostThresHold INT,-- Let the query calculate this ║
-╠════════════════════════════════════════════════════════════╣
-║ DECLARE @DBfile nvarchar(500) -- 'C:\Data'                 ║
-╠════════════════════════════════════════════════════════════╣
-║ DECLARE @Logfile nvarchar(500) -- 'C:\Log'                 ║
-╠════════════════════════════════════════════════════════════╣
-║ DECLARE @Backup NVARCHAR(500)   -- 'C:\backups'            ║
-╚════════════════════════════════════════════════════════════╝
+
+DECLARE @MinMem int -- Let the query calculate this        
+DECLARE @MaxMem int -- Let the query calculate this        
+DECLARE @P_MAXDOP INT -- Let the query calculate this      
+DECLARE @CostThresHold INT -- Let the query calculate this 
+DECLARE @DBfile nvarchar(500) = 'C:\Data'                  
+DECLARE @Logfile nvarchar(500) =  'C:\Log'                 
+DECLARE @Backup NVARCHAR(500) = 'C:\backups\'              
+DECLARE @TempfilePath nvarchar(500) = 'C:\temp\'           
+DECLARE @TempfileSize nvarchar(100) = '100MB' 
 
 ******************************************************************/
 
@@ -79,6 +67,9 @@ DECLARE @CostThresHold INT
 DECLARE @DBfile nvarchar(500)
 DECLARE @Logfile nvarchar(500)
 DECLARE @Backup NVARCHAR(500)
+DECLARE @TempfilePath nvarchar(500)
+DECLARE @TempfileSize nvarchar(100) 
+
 
 EXEC sp_configure 'show advanced options', 1;
 
@@ -204,3 +195,48 @@ N'BackupDirectory',
 REG_SZ, 
 @Logfile  
 GO
+
+-- Add temp files
+-- Calculate Number of Required TempDB Files
+Declare @cpu int =( SELECT count(cpu_count)
+FROM sys.dm_os_sys_info )
+Declare @currenttempfine int = (SELECT count(name)
+FROM tempdb.sys.database_files)
+Declare @requiredtmpfiles int
+IF @cpu < 8  Set @requiredtmpfiles = 5
+IF @CPU >8  Set @requiredtmpfiles = 9
+
+-- Declare variables for adding new tempDB files
+Declare @int int
+Declare @MAX_File int
+Declare @temp table   (name nvarchar(20),
+    id int,
+    location nvarchar(1000),
+    f_group varchar(20),
+    size nvarchar(100),
+    maxsize nvarchar(100),
+    growth nvarchar(100),
+    usgae nvarchar(100))
+
+Insert into @temp
+exec tempdb.dbo.sp_helpfile
+
+SET @TempfileSize = coalesce(nullif(@TempfileSize, ''), '100MB')
+
+
+
+IF @currenttempfine = @requiredtmpfiles    Print 'TempDB Files Are OK'
+SET @int=1
+Set @MAX_File = (@requiredtmpfiles -@currenttempfine)
+
+-- Adding TempDB Files
+WHILE @int <= @MAX_File
+   Begin
+    Declare @addfiles nvarchar(500)= (select 'ALTER DATABASE [tempdb] ADD FILE (NAME = '+'''tempdb_'+cast(@int as nvarchar(10))+''', FILENAME ='''+@TempfilePath+'tempdb_'+cast(@int as nvarchar(10))+'.ndf'' , SIZE = '+cast(@TempfileSize as nvarchar(10))+')' )
+    --print @addfiles
+    EXEC (@addfiles)
+    SET @int=@int+1
+END
+IF @currenttempfine > @requiredtmpfiles print Cast(@currenttempfine-@requiredtmpfiles  as nvarchar(100))+' File need to be removed'
+
+ 
