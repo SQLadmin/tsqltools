@@ -194,7 +194,6 @@ N'Software\Microsoft\MSSQLServer\MSSQLServer',
 N'BackupDirectory', 
 REG_SZ, 
 @Logfile  
-GO
 
 -- Add temp files
 -- Calculate Number of Required TempDB Files
@@ -225,5 +224,5 @@ WHILE @int <= @MAX_File
     SET @int=@int+1
 END
 IF @currenttempfine > @requiredtmpfiles print Cast(@currenttempfine-@requiredtmpfiles  as nvarchar(100))+' File need to be removed'
-
+GO
  
