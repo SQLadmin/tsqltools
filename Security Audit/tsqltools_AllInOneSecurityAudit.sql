@@ -108,7 +108,7 @@ INSERT INTO #result
   FROM #datadirectory
 
 IF OBJECT_ID('tempdb.dbo.#StartupType', 'U') IS NOT NULL
-  DROP TABLE #startuptype
+   begin  DROP TABLE #startuptype end
 
 CREATE TABLE #startuptype (
   sqlservice varchar(50),
