@@ -28,146 +28,126 @@ Use a centalized server  and create LinkedServers from the centralized server.
 Or Create LinkedServer on SourceDB server then run this query on SourceDB server.
 
 ========================================================================*/
-DECLARE @SOURCEDBSERVER varchar(100)
-DECLARE @DESTINATIONDBSERVER varchar(100)
-DECLARE @SOURCE_SQL_DBNAME nvarchar(300)
-DECLARE @SOURCE_DATABASENAME TABLE (  dbname varchar(100))
-DECLARE @DESTINATION_SQL_DBNAME nvarchar(300)
-DECLARE @DESTINATION_DATABASENAME TABLE (  dbname varchar(100))
+-- Declare necessary variables
+DECLARE @SourceDbServer NVARCHAR(100) = '[db01]';  -- Replace with your source DB server name
+DECLARE @DestinationDbServer NVARCHAR(100) = '[db02]';  -- Replace with your target DB server name
+DECLARE @SourceDbNameQuery NVARCHAR(MAX);
+DECLARE @DestinationDbNameQuery NVARCHAR(MAX);
 
+-- Declare table variables to store database names
+DECLARE @SourceDatabases TABLE (DbName NVARCHAR(100));
+DECLARE @DestinationDatabases TABLE (DbName NVARCHAR(100));
 
-SELECT @SOURCEDBSERVER = '[db01]' --==> Replace Your Source DB serverName Here
+-- Populate source database names
+SET @SourceDbNameQuery = N'SELECT name FROM ' + @SourceDbServer + '.master.sys.databases WHERE database_id > 4';
+INSERT INTO @SourceDatabases
+EXEC sp_executesql @SourceDbNameQuery;
 
-SELECT @DESTINATIONDBSERVER = '[db02]' --==> Replace Your Target DB serverName Here
+-- Populate destination database names
+SET @DestinationDbNameQuery = N'SELECT name FROM ' + @DestinationDbServer + '.master.sys.databases WHERE database_id > 4';
+INSERT INTO @DestinationDatabases
+EXEC sp_executesql @DestinationDbNameQuery;
 
-SELECT
-  @SOURCE_SQL_DBNAME = 'select name from ' + @SOURCEDBSERVER + '.master.sys.databases where database_id>4'
-INSERT INTO @SOURCE_DATABASENAME EXEC sp_executesql @SOURCE_SQL_DBNAME
-SELECT
-  @DESTINATION_SQL_DBNAME = 'select name from ' + @DESTINATIONDBSERVER + '.master.sys.databases where database_id>4'
-INSERT INTO @DESTINATION_DATABASENAME EXEC sp_executesql @DESTINATION_SQL_DBNAME
- 
+-- Temporary tables to store index information
+CREATE TABLE #SourceDbIndexes (
+    DbName NVARCHAR(100),
+    TableName NVARCHAR(500),
+    IndexName NVARCHAR(300),
+    IndexType NVARCHAR(100)
+);
 
-CREATE TABLE #SOURCEDB_INDEX (
-  DB nvarchar(100),
-  TableName nvarchar(500),
-  IndexName varchar(300),
-  Type varchar(100)
-)
-CREATE TABLE #DESTINATIONDB_INDEX (
-  DB nvarchar(100),
-  TableName nvarchar(500),
-  IndexName varchar(300),
-  Type varchar(100)
-)
+CREATE TABLE #DestinationDbIndexes (
+    DbName NVARCHAR(100),
+    TableName NVARCHAR(500),
+    IndexName NVARCHAR(300),
+    IndexType NVARCHAR(100)
+);
 
+-- Cursor to iterate through source databases
+DECLARE dbCursor CURSOR FOR
+SELECT DbName FROM @SourceDatabases;
 
- 
-DECLARE dbcursor CURSOR FOR
-SELECT
-  dbname
-FROM @SOURCE_DATABASENAME
+OPEN dbCursor;
 
-OPEN dbcursor
-DECLARE @Source_DBname varchar(100)
-FETCH NEXT FROM dbcursor INTO @Source_DBNAME
+DECLARE @SourceDbName NVARCHAR(100);
+FETCH NEXT FROM dbCursor INTO @SourceDbName;
+
 WHILE @@FETCH_STATUS = 0
 BEGIN
+    DECLARE @SourceSql NVARCHAR(MAX) = '
+    INSERT INTO #SourceDbIndexes
+    SELECT ''' + @SourceDbName + ''', 
+           so.name AS TableName, 
+           si.name AS IndexName, 
+           si.type_desc AS IndexType
+    FROM ' + @SourceDbServer + '.' + @SourceDbName + '.sys.indexes si
+    JOIN ' + @SourceDbServer + '.' + @SourceDbName + '.sys.objects so
+    ON si.object_id = so.object_id
+    WHERE so.type = ''U'' AND si.name IS NOT NULL
+    ORDER BY so.name, si.type';
 
-  DECLARE @SOURCE_SQL nvarchar(max)
+    EXEC sp_executesql @SourceSql;
+    FETCH NEXT FROM dbCursor INTO @SourceDbName;
+END;
 
-  SELECT
-    @SOURCE_SQL ='  
-  insert into #SOURCEDB_INDEX SELECT ' + '''' + @Source_DBname + '''' + ',
-  so.name AS TableName,
-  si.name AS IndexName,
-  si.type_desc AS IndexType
-  FROM ' + @SOURCEDBSERVER + '.' + @Source_DBname + '.sys.indexes si
-  JOIN ' + @SOURCEDBSERVER + '.' + @Source_DBname + '.sys.objects so 
-  ON si.[object_id] = so.[object_id]
-  WHERE
-  so.type = ' + '''U''' + '
-  AND si.name IS NOT NULL ORDER BY
-  so.name, si.type
-  '
+CLOSE dbCursor;
+DEALLOCATE dbCursor;
 
- 
-  EXEC sp_executesql @SOURCE_SQL
-  FETCH NEXT FROM dbcursor INTO @Source_DBname
-END
+-- Cursor to iterate through destination databases
+DECLARE dbCursor CURSOR FOR
+SELECT DbName FROM @DestinationDatabases;
 
-CLOSE dbcursor
+OPEN dbCursor;
 
-DEALLOCATE dbcursor
- 
- 
+DECLARE @DestinationDbName NVARCHAR(100);
+FETCH NEXT FROM dbCursor INTO @DestinationDbName;
 
-
- 
-DECLARE dbcursor CURSOR FOR
-SELECT
-  dbname
-FROM @DESTINATION_DATABASENAME
-
-OPEN dbcursor
-DECLARE @DESTINATION_DBname varchar(100)
-FETCH NEXT FROM dbcursor INTO @DESTINATION_DBNAME
 WHILE @@FETCH_STATUS = 0
 BEGIN
+    DECLARE @DestinationSql NVARCHAR(MAX) = '
+    INSERT INTO #DestinationDbIndexes
+    SELECT ''' + @DestinationDbName + ''', 
+           so.name AS TableName, 
+           si.name AS IndexName, 
+           si.type_desc AS IndexType
+    FROM ' + @DestinationDbServer + '.' + @DestinationDbName + '.sys.indexes si
+    JOIN ' + @DestinationDbServer + '.' + @DestinationDbName + '.sys.objects so
+    ON si.object_id = so.object_id
+    WHERE so.type = ''U'' AND si.name IS NOT NULL
+    ORDER BY so.name, si.type';
 
-  DECLARE @DESTINATION_SQL nvarchar(max)
+    EXEC sp_executesql @DestinationSql;
+    FETCH NEXT FROM dbCursor INTO @DestinationDbName;
+END;
 
-  SELECT
-    @DESTINATION_SQL ='
-  insert into #DESTINATIONDB_INDEX SELECT ' + '''' + @DESTINATION_DBname + '''' + ',         
-  so.name AS TableName,
-  si.name AS IndexName,
-  si.type_desc AS IndexType
-  FROM ' + @DESTINATIONDBSERVER + '.' + @DESTINATION_DBname + '.sys.indexes si
-  JOIN ' + @DESTINATIONDBSERVER + '.' + @DESTINATION_DBname + '.sys.objects so 
-  ON si.[object_id] = so.[object_id]
-  WHERE
-  so.type = ' + '''U''' + '
-  AND si.name IS NOT NULL ORDER BY
-  so.name, si.type     '
+CLOSE dbCursor;
+DEALLOCATE dbCursor;
 
-  
-  EXEC sp_executesql @DESTINATION_SQL
-  FETCH NEXT FROM dbcursor INTO @DESTINATION_DBname
-END
+-- Compare indexes and output status
+WITH SourceIndexHash AS (
+    SELECT DbName, TableName, IndexName, 
+           HASHBYTES('SHA1', CONCAT(DbName, TableName, IndexName)) AS IndexHash
+    FROM #SourceDbIndexes
+),
+DestinationIndexHash AS (
+    SELECT DbName, TableName, IndexName, 
+           HASHBYTES('SHA1', CONCAT(DbName, TableName, IndexName)) AS IndexHash
+    FROM #DestinationDbIndexes
+)
+SELECT 
+    COALESCE(s.DbName, d.DbName) AS DbName,
+    COALESCE(s.TableName, d.TableName) AS TableName,
+    COALESCE(s.IndexName, d.IndexName) AS IndexName,
+    CASE
+        WHEN s.IndexHash IS NULL THEN 'Available On ' + @DestinationDbServer + ' Only'
+        WHEN d.IndexHash IS NULL THEN 'Available On ' + @SourceDbServer + ' Only'
+        ELSE 'Available On Both Servers'
+    END AS Status
+FROM SourceIndexHash s
+FULL JOIN DestinationIndexHash d
+ON s.IndexHash = d.IndexHash
+ORDER BY TableName;
 
-CLOSE dbcursor
-
-DEALLOCATE dbcursor
- 
-
-;
-WITH cte
-AS (SELECT
-  DB,
-  TableName,
-  IndexName,
-  HASHBYTES('sha1', concat(DB, TableName, IndexName)) AS tb1
-FROM #SOURCEDB_INDEX)
-SELECT
-  ISNULL(c.DB, b.DB) AS DB,
-  ISNULL(c.TableName, b.TableName) AS TableName,
-  ISNULL(c.IndexName, b.IndexName) AS IndexName,
-  CASE
-    WHEN c.tb1 IS NULL THEN 'Available On ' + @DESTINATIONDBSERVER + ' Only'
-    WHEN c.tb1 IS NOT NULL AND
-      b.tb1 IS NOT NULL THEN 'Available On Both Servers'
-    WHEN b.tb1 IS NULL THEN 'Available On ' + @SOURCEDBSERVER + ' Only'
-  END AS 'Status'
-FROM cte c
-FULL JOIN (SELECT
-  DB,
-  TableName,
-  IndexName,
-  HASHBYTES('sha1', concat(DB, TableName, IndexName)) AS tb1
-FROM #DESTINATIONDB_INDEX) b
-  ON b.tb1 = c.tb1
-ORDER BY tablename
-
-DROP TABLE #SOURCEDB_INDEX
-DROP TABLE #DESTINATIONDB_INDEX
+-- Clean up temporary tables
+DROP TABLE #SourceDbIndexes;
+DROP TABLE #DestinationDbIndexes;
