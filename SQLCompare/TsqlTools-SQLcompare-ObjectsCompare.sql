@@ -28,131 +28,101 @@ Use a centalized server  and create LinkedServers from the centralized server.
 Or Create LinkedServer on SourceDB server then run this query on SourceDB server.
 
 ========================================================================*/
-DECLARE @SOURCEDBSERVER VARCHAR(100) 
-DECLARE @DESTINATIONDBSERVER VARCHAR(100) 
-DECLARE @SOURCE_SQL_DBNAME NVARCHAR(300) 
-DECLARE @SOURCE_DATABASENAME TABLE 
-  ( 
-     dbname VARCHAR(100) 
-  ) 
+-- Declare necessary variables
+DECLARE @SourceDbServer NVARCHAR(100) = '[db01]';  -- Replace with your source DB server name
+DECLARE @DestinationDbServer NVARCHAR(100) = '[db02]';  -- Replace with your target DB server name
+DECLARE @SourceDbNameQuery NVARCHAR(MAX);
+DECLARE @SourceDbName NVARCHAR(100);
 
-SELECT @SOURCEDBSERVER = '[db01]' --==> Replace Your Source DB serverName Here
+-- Declare table variable to store source database names
+DECLARE @SourceDatabases TABLE (DbName NVARCHAR(100));
 
-SELECT @DESTINATIONDBSERVER = '[db02]' --==> Replace Your Target DB serverName Here
+-- Populate source database names
+SET @SourceDbNameQuery = N'SELECT name FROM ' + @SourceDbServer + '.master.sys.databases WHERE database_id > 4';
+INSERT INTO @SourceDatabases
+EXEC sp_executesql @SourceDbNameQuery;
 
-SELECT @SOURCE_SQL_DBNAME = 'select name from ' + @SOURCEDBSERVER 
-                            + '.master.sys.databases where database_id>4' 
+-- Temporary table to store object status
+CREATE TABLE #ObjectStatus (
+    DbName NVARCHAR(500),
+    ObjectName NVARCHAR(500),
+    ObjectType NVARCHAR(500),
+    Status NVARCHAR(500)
+);
 
-INSERT INTO @SOURCE_DATABASENAME 
-EXEC Sp_executesql 
-  @SOURCE_SQL_DBNAME 
+-- Cursor to iterate through source databases
+DECLARE dbCursor CURSOR FOR
+SELECT DbName FROM @SourceDatabases;
 
-CREATE TABLE #objectstaus 
-  ( 
-     dbname       NVARCHAR(500) 
-     , objectname NVARCHAR(500) 
-     , objecttype VARCHAR(500) 
-     , status     NVARCHAR(500) 
-  ) 
+OPEN dbCursor;
 
-DECLARE dbcursor CURSOR FOR 
-  SELECT dbname 
-  FROM   @SOURCE_DATABASENAME 
+FETCH NEXT FROM dbCursor INTO @SourceDbName;
 
-OPEN dbcursor 
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    DECLARE @SourceDbFullName NVARCHAR(500);
+    DECLARE @DestinationDbFullName NVARCHAR(500);
+    DECLARE @Sql NVARCHAR(MAX);
 
-DECLARE @SOURCE_DBNAME VARCHAR(100) 
+    -- Construct full database names
+    SET @SourceDbFullName = @SourceDbServer + '.' + @SourceDbName;
+    SET @DestinationDbFullName = @DestinationDbServer + '.' + @SourceDbName;
 
-FETCH next FROM dbcursor INTO @SOURCE_DBNAME 
+    -- Construct SQL query to compare objects between source and destination databases
+    SET @Sql = N'
+    SELECT ''' + @SourceDbName + ''' AS DbName,
+           ISNULL(SoSource.name, SoDestination.name) AS ObjectName,
+           COALESCE(SoSource.type_desc, SoDestination.type_desc) AS ObjectType,
+           CASE
+               WHEN SoSource.object_id IS NULL THEN ''Available on ' + @DestinationDbFullName + '''
+               WHEN SoDestination.object_id IS NULL THEN ''Available on ' + @SourceDbFullName + '''
+               ELSE ''Available on Both Servers''
+           END AS Status
+    FROM ' + @SourceDbFullName + '.sys.objects SoSource
+    FULL OUTER JOIN ' + @DestinationDbFullName + '.sys.objects SoDestination
+    ON SoSource.name = SoDestination.name COLLATE database_default
+    AND SoSource.type = SoDestination.type COLLATE database_default
+    WHERE COALESCE(SoSource.type_desc, SoDestination.type_desc) NOT IN (''INTERNAL_TABLE'', ''SYSTEM_TABLE'', ''SERVICE_QUEUE'')
+    ORDER BY COALESCE(SoSource.type_desc, SoDestination.type_desc)';
 
-WHILE @@FETCH_STATUS = 0 
-  BEGIN 
-      DECLARE @SOURCEDBSERVERNAME SYSNAME 
-      DECLARE @DESTDBNAME SYSNAME 
-      DECLARE @SQL VARCHAR(max) 
+    -- Execute SQL query and insert results into temporary table
+    INSERT INTO #ObjectStatus
+    EXEC sp_executesql @Sql;
 
-      SELECT @SOURCEDBSERVERNAME = (SELECT 
-             @SOURCEDBSERVER + '.' + @SOURCE_DBNAME) 
+    FETCH NEXT FROM dbCursor INTO @SourceDbName;
+END;
 
-      SELECT @DESTDBNAME = @DESTINATIONDBSERVER + '.' + @SOURCE_DBNAME 
+CLOSE dbCursor;
+DEALLOCATE dbCursor;
 
-      SELECT @SQL = '  SELECT ' + '''' + @SOURCE_DBNAME + '''' + ' as DB, 
-      ISNULL(SoSource.name,SoDestination.name) ''Object Name'' , SoDestination.type_desc ,  
-      CASE 
-        WHEN SoSource.object_id IS NULL THEN +  ''  Available on  ' + @DESTDBNAME + ''' COLLATE database_default  
-        WHEN SoDestination.object_id IS NULL THEN +  '' Available On ' + @SOURCEDBSERVERNAME + ''' COLLATE database_default     
-      ELSE   
-      + '' Available On Both Servers'' COLLATE database_default END ''Status''
-      FROM (SELECT * FROM ' 
-                    + @SOURCEDBSERVERNAME 
-                    + '.SYS.objects WHERE Type_desc not in  (''INTERNAL_TABLE'',''SYSTEM_TABLE'',''SERVICE_QUEUE'')) SoSource 
-                      FULL OUTER JOIN (SELECT * FROM ' + @DESTDBNAME 
-                    + '.SYS.objects 
-                    WHERE Type_desc not in (''INTERNAL_TABLE'',''SYSTEM_TABLE'',''SERVICE_QUEUE'')) 
-                    SoDestination  ON SoSource.name = SoDestination.name COLLATE database_default 
-                    AND SoSource.type = SoDestination.type 
-                    COLLATE database_default 
-                    ORDER BY isnull(SoSource.type,SoDestination.type)' 
+-- Query to select and order objects by type
+SELECT * FROM #ObjectStatus WHERE ObjectType = 'USER_TABLE' ORDER BY DbName ASC;
+SELECT * FROM #ObjectStatus WHERE ObjectType = 'CHECK_CONSTRAINT' ORDER BY DbName ASC;
+SELECT * FROM #ObjectStatus WHERE ObjectType = 'DEFAULT_CONSTRAINT' ORDER BY DbName ASC;
+SELECT * FROM #ObjectStatus WHERE ObjectType = 'FOREIGN_KEY_CONSTRAINT' ORDER BY DbName ASC;
+SELECT * FROM #ObjectStatus WHERE ObjectType = 'PRIMARY_KEY_CONSTRAINT' ORDER BY DbName ASC;
+SELECT * FROM #ObjectStatus WHERE ObjectType = 'UNIQUE_CONSTRAINT' ORDER BY DbName ASC;
+SELECT * FROM #ObjectStatus WHERE ObjectType = 'SQL_TRIGGER' ORDER BY DbName ASC;
+SELECT * FROM #ObjectStatus WHERE ObjectType = 'VIEW' ORDER BY DbName ASC;
+SELECT * FROM #ObjectStatus WHERE ObjectType = 'SQL_STORED_PROCEDURE' ORDER BY DbName ASC;
 
-      INSERT INTO #objectstaus 
-      EXEC (@SQL) 
+-- Select remaining object types not listed above
+SELECT * FROM #ObjectStatus
+WHERE ObjectType NOT IN (
+    'USER_TABLE',
+    'CHECK_CONSTRAINT',
+    'DEFAULT_CONSTRAINT',
+    'FOREIGN_KEY_CONSTRAINT',
+    'PRIMARY_KEY_CONSTRAINT',
+    'UNIQUE_CONSTRAINT',
+    'SQL_TRIGGER',
+    'VIEW',
+    'SQL_STORED_PROCEDURE'
+)
+ORDER BY DbName ASC;
 
-      FETCH next FROM dbcursor INTO @SOURCE_DBNAME 
-  END 
-
-CLOSE dbcursor 
-
-DEALLOCATE dbcursor 
-
-SELECT * 
-FROM   #objectstaus where objecttype='USER_TABLE'
-ORDER  BY dbname ASC 
-
-SELECT * 
-FROM   #objectstaus where objecttype='CHECK_CONSTRAINT'
-ORDER  BY dbname ASC 
-
-SELECT * 
-FROM   #objectstaus where objecttype='DEFAULT_CONSTRAINT'
-ORDER  BY dbname ASC 
-
-SELECT * 
-FROM   #objectstaus where objecttype='FOREIGN_KEY_CONSTRAINT'
-ORDER  BY dbname ASC 
-
-SELECT * 
-FROM   #objectstaus where objecttype='PRIMARY_KEY_CONSTRAINT'
-ORDER  BY dbname ASC 
-
-SELECT * 
-FROM   #objectstaus where objecttype='UNIQUE_CONSTRAINT'
-ORDER  BY dbname ASC 
-
-SELECT * 
-FROM   #objectstaus where objecttype='SQL_TRIGGER'
-ORDER  BY dbname ASC 
-
-SELECT * 
-FROM   #objectstaus where objecttype='VIEW'
-ORDER  BY dbname ASC 
-
-SELECT * 
-FROM   #objectstaus where objecttype='SQL_STORED_PROCEDURE'
-ORDER  BY dbname ASC 
-
-SELECT * 
-FROM   #objectstaus where objecttype not in ('USER_TABLE',
-'CHECK_CONSTRAINT',
-'DEFAULT_CONSTRAINT',
-'FOREIGN_KEY_CONSTRAINT',
-'PRIMARY_KEY_CONSTRAINT',
-'SQL_TRIGGER',
-'VIEW',
-'SQL_STORED_PROCEDURE'
-'UNIQUE_CONSTRAINT')
-ORDER  BY dbname ASC 
-DROP TABLE #objectstaus 
- 
+-- Clean up temporary table
+DROP TABLE #ObjectStatus;
 
  
 
