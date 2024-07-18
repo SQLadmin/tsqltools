@@ -28,101 +28,127 @@ Use a centalized server  and create LinkedServers from the centralized server.
 Or Create LinkedServer on SourceDB server then run this query on SourceDB server.
 
 ========================================================================*/
-DECLARE @SOURCEDBSERVER varchar(100)
-DECLARE @DESTINATIONDBSERVER varchar(100)
-DECLARE @SOURCE_SQL_DBNAME nvarchar(300)
-DECLARE @SOURCE_DATABASENAME TABLE (  dbname varchar(100))
-DECLARE @DESTINATION_SQL_DBNAME nvarchar(300)
-DECLARE @DESTINATION_DATABASENAME TABLE (  dbname varchar(100))
+-- Declare necessary variables
+DECLARE @SourceDbServer NVARCHAR(100) = '[db01]';  -- Replace with your source DB server name
+DECLARE @DestinationDbServer NVARCHAR(100) = '[db02]';  -- Replace with your target DB server name
+DECLARE @SourceDbNameQuery NVARCHAR(MAX);
+DECLARE @DestinationDbNameQuery NVARCHAR(MAX);
 
-SELECT @SOURCEDBSERVER = '[db01]' --==> Replace Your Source DB serverName Here
+-- Declare table variables to store database names
+DECLARE @SourceDatabases TABLE (DbName NVARCHAR(100));
+DECLARE @DestinationDatabases TABLE (DbName NVARCHAR(100));
 
-SELECT @DESTINATIONDBSERVER = '[db02]' --==> Replace Your Target DB serverName Here
+-- Create temporary tables to store table row counts
+CREATE TABLE #SourceTbl (
+    DbName NVARCHAR(200),
+    TableName NVARCHAR(200),
+    Rows BIGINT
+);
 
-Create table #sourceTbl (DBname nvarchar(200),TableName nvarchar(200),Rows bigint)
-Create table #DestTbl (DBname nvarchar(200),TableName nvarchar(200),Rows bigint)
+CREATE TABLE #DestTbl (
+    DbName NVARCHAR(200),
+    TableName NVARCHAR(200),
+    Rows BIGINT
+);
 
-SELECT  @SOURCE_SQL_DBNAME = 'select name from ' + @SOURCEDBSERVER + '.master.sys.databases where database_id>4'
-INSERT INTO @SOURCE_DATABASENAME EXEC sp_executesql @SOURCE_SQL_DBNAME 
+-- Populate source database names
+SET @SourceDbNameQuery = N'SELECT name FROM ' + @SourceDbServer + '.master.sys.databases WHERE database_id > 4';
+INSERT INTO @SourceDatabases
+EXEC sp_executesql @SourceDbNameQuery;
 
-SELECT  @DESTINATION_SQL_DBNAME = 'select name from ' + @DESTINATIONDBSERVER + '.master.sys.databases where database_id>4'
-INSERT INTO @DESTINATION_DATABASENAME EXEC sp_executesql @DESTINATION_SQL_DBNAME
+-- Populate destination database names
+SET @DestinationDbNameQuery = N'SELECT name FROM ' + @DestinationDbServer + '.master.sys.databases WHERE database_id > 4';
+INSERT INTO @DestinationDatabases
+EXEC sp_executesql @DestinationDbNameQuery;
 
-DECLARE dbcursor CURSOR FOR
-SELECT  dbname FROM @SOURCE_DATABASENAME
-OPEN dbcursor
-DECLARE @Source_DBname varchar(100)
-FETCH NEXT FROM dbcursor INTO @Source_DBNAME
-WHILE @@FETCH_STATUS = 0
+-- Cursor to iterate through source databases
+DECLARE dbCursor CURSOR FOR
+SELECT DbName FROM @SourceDatabases;
 
-BEGIN
+OPEN dbCursor;
 
-  DECLARE @SOURCE_SQL nvarchar(max)
+DECLARE @SourceDbName NVARCHAR(100);
 
-  SELECT
-    @SOURCE_SQL =
+FETCH NEXT FROM dbCursor INTO @SourceDbName;
 
-' SELECT '+''''+@Source_DBNAME+''''+' as DBname, sc.name +'+''''+'.'+''''+'+ ta.name TableName
- ,SUM(pa.rows) RowCnt
- FROM '+@SOURCEDBSERVER+'.'+@Source_DBNAME+'.sys.tables ta
- INNER JOIN '+@SOURCEDBSERVER+'.'+@Source_DBNAME+'.sys.partitions pa
- ON pa.OBJECT_ID = ta.OBJECT_ID
- INNER JOIN '+@SOURCEDBSERVER+'.'+@Source_DBNAME+'.sys.schemas sc
- ON ta.schema_id = sc.schema_id
- WHERE ta.is_ms_shipped = 0 AND pa.index_id IN (1,0)
- GROUP BY sc.name,ta.name
- ORDER BY SUM(pa.rows) DESC'
-
-   
-  insert into #sourceTbl EXEC sp_executesql @SOURCE_SQL
-  FETCH NEXT FROM dbcursor INTO @Source_DBname
-END
-
-CLOSE dbcursor
-
-DEALLOCATE dbcursor
- 
-
-DECLARE dbcursor CURSOR FOR
-SELECT
-  dbname
-FROM @DESTINATION_DATABASENAME
-
-OPEN dbcursor
-DECLARE @DESTINATION_DBname varchar(100)
-FETCH NEXT FROM dbcursor INTO @DESTINATION_DBNAME
 WHILE @@FETCH_STATUS = 0
 BEGIN
+    DECLARE @SourceSql NVARCHAR(MAX);
 
-  DECLARE @DESTINATION_SQL nvarchar(max)
+    -- Construct SQL query to get table row counts from source database
+    SET @SourceSql = N'
+    SELECT ''' + @SourceDbName + ''' AS DbName, 
+           sc.name + ''.'' + ta.name AS TableName, 
+           SUM(pa.rows) AS Rows
+    FROM ' + @SourceDbServer + '.' + @SourceDbName + '.sys.tables ta
+    INNER JOIN ' + @SourceDbServer + '.' + @SourceDbName + '.sys.partitions pa
+    ON pa.OBJECT_ID = ta.OBJECT_ID
+    INNER JOIN ' + @SourceDbServer + '.' + @SourceDbName + '.sys.schemas sc
+    ON ta.schema_id = sc.schema_id
+    WHERE ta.is_ms_shipped = 0 AND pa.index_id IN (1, 0)
+    GROUP BY sc.name, ta.name
+    ORDER BY SUM(pa.rows) DESC';
 
-  SELECT
-    @DESTINATION_SQL =
-   ' SELECT  '+''''+@DESTINATION_DBNAME+''''+' as DBname,sc.name +'+''''+'.'+''''+'+ ta.name TableName
- ,SUM(pa.rows) RowCnt
- FROM '+@DESTINATIONDBSERVER+'.'+@DESTINATION_DBNAME+'.sys.tables ta
- INNER JOIN '+@DESTINATIONDBSERVER+'.'+@DESTINATION_DBNAME+'.sys.partitions pa
- ON pa.OBJECT_ID = ta.OBJECT_ID
- INNER JOIN '+@DESTINATIONDBSERVER+'.'+@DESTINATION_DBNAME+'.sys.schemas sc
- ON ta.schema_id = sc.schema_id
- WHERE ta.is_ms_shipped = 0 AND pa.index_id IN (1,0)
- GROUP BY sc.name,ta.name
- ORDER BY SUM(pa.rows) DESC'
- 
-   
-  insert into #DestTbl  EXEC sp_executesql @DESTINATION_SQL
-  FETCH NEXT FROM dbcursor INTO @DESTINATION_DBname
-END
+    -- Execute SQL query and insert results into temporary table
+    INSERT INTO #SourceTbl
+    EXEC sp_executesql @SourceSql;
 
-CLOSE dbcursor
+    FETCH NEXT FROM dbCursor INTO @SourceDbName;
+END;
 
-DEALLOCATE dbcursor
- 
-select a.DBname,a.TableName,(b.Rows-a.rows) as RowsDifference,
-case 
-  when(b.Rows-a.rows) >=100 then 'Alert' 
-when(b.Rows-a.rows) <100 then 'OK' End as Status
-from #sourceTbl a,#DestTbl b where a.DBname=b.DBname and a.TableName=b.TableName
-drop table #sourceTbl
-drop table #DestTbl
+CLOSE dbCursor;
+DEALLOCATE dbCursor;
+
+-- Cursor to iterate through destination databases
+DECLARE dbCursor CURSOR FOR
+SELECT DbName FROM @DestinationDatabases;
+
+OPEN dbCursor;
+
+DECLARE @DestinationDbName NVARCHAR(100);
+
+FETCH NEXT FROM dbCursor INTO @DestinationDbName;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    DECLARE @DestinationSql NVARCHAR(MAX);
+
+    -- Construct SQL query to get table row counts from destination database
+    SET @DestinationSql = N'
+    SELECT ''' + @DestinationDbName + ''' AS DbName, 
+           sc.name + ''.'' + ta.name AS TableName, 
+           SUM(pa.rows) AS Rows
+    FROM ' + @DestinationDbServer + '.' + @DestinationDbName + '.sys.tables ta
+    INNER JOIN ' + @DestinationDbServer + '.' + @DestinationDbName + '.sys.partitions pa
+    ON pa.OBJECT_ID = ta.OBJECT_ID
+    INNER JOIN ' + @DestinationDbServer + '.' + @DestinationDbName + '.sys.schemas sc
+    ON ta.schema_id = sc.schema_id
+    WHERE ta.is_ms_shipped = 0 AND pa.index_id IN (1, 0)
+    GROUP BY sc.name, ta.name
+    ORDER BY SUM(pa.rows) DESC';
+
+    -- Execute SQL query and insert results into temporary table
+    INSERT INTO #DestTbl
+    EXEC sp_executesql @DestinationSql;
+
+    FETCH NEXT FROM dbCursor INTO @DestinationDbName;
+END;
+
+CLOSE dbCursor;
+DEALLOCATE dbCursor;
+
+-- Compare table row counts and output status
+SELECT a.DbName,
+       a.TableName,
+       (b.Rows - a.Rows) AS RowsDifference,
+       CASE 
+           WHEN (b.Rows - a.Rows) >= 100 THEN 'Alert'
+           ELSE 'OK'
+       END AS Status
+FROM #SourceTbl a
+JOIN #DestTbl b ON a.DbName = b.DbName AND a.TableName = b.TableName;
+
+-- Clean up temporary tables
+DROP TABLE #SourceTbl;
+DROP TABLE #DestTbl;
 
